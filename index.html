@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>South China Express | Receipt</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--red:#9d1717;--dark:#171717;--gold:#c99428;--paper:#fff;--muted:#6b7280;--bg:#f4efe5}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--dark)}
+    .wrap{max-width:720px;margin:0 auto;padding:24px 14px 50px}
+    .receipt{background:var(--paper);border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.12);overflow:hidden}
+    header{background:var(--red);color:white;text-align:center;padding:26px 18px;border-bottom:5px solid var(--gold)}
+    header h1{margin:0;font-size:30px;letter-spacing:.7px}
+    header p{margin:7px 0 0;opacity:.92}
+    main{padding:24px}
+    .status{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+    .badge{padding:7px 11px;border-radius:999px;font-weight:700;font-size:13px;background:#f2f2f2}
+    .paid{background:#dcfce7;color:#166534}.due{background:#fef3c7;color:#92400e}
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-bottom:20px;border-bottom:1px dashed #bbb}
+    .label{font-size:12px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .value{font-weight:700}
+    h2{font-size:18px;margin:24px 0 10px}
+    .item{padding:13px 0;border-bottom:1px solid #eee}
+    .item-top{display:flex;justify-content:space-between;gap:15px;font-weight:700}
+    .option{font-size:14px;color:#555;margin-top:5px}
+    .item-bottom{display:flex;justify-content:space-between;margin-top:7px;color:#666;font-size:14px}
+    .total{display:flex;justify-content:space-between;align-items:center;font-size:23px;font-weight:800;padding:22px 0 8px}
+    .tax{text-align:right;color:var(--muted);font-size:12px}
+    .actions{padding:0 24px 24px}
+    button{width:100%;border:0;border-radius:12px;background:var(--red);color:white;font-size:17px;font-weight:800;padding:15px;cursor:pointer}
+    .message{text-align:center;padding:45px 24px}
+    .message h2{font-size:23px}.message p{color:#666;line-height:1.5}
+    footer{text-align:center;color:#777;font-size:12px;padding:18px}
+    @media(max-width:520px){.meta{grid-template-columns:1fr}header h1{font-size:25px}}
+    @media print{
+      body{background:white}.wrap{max-width:none;padding:0}.receipt{box-shadow:none;border-radius:0}
+      .actions{display:none}header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="receipt">
+    <header>
+      <h1>SOUTH CHINA EXPRESS</h1>
+      <p>Customer Receipt</p>
+    </header>
+
+    <div id="loading" class="message">
+      <h2>Loading receipt…</h2>
+      <p>Please wait while we retrieve your order.</p>
+    </div>
+
+    <main id="content" hidden>
+      <div class="status">
+        <span class="badge" id="orderStatus"></span>
+        <span class="badge" id="paymentStatus"></span>
+      </div>
+
+      <div class="meta">
+        <div><div class="label">Order Number</div><div class="value" id="orderNumber"></div></div>
+        <div><div class="label">Order Date</div><div class="value" id="orderDate"></div></div>
+        <div><div class="label">Customer</div><div class="value" id="customerName"></div></div>
+        <div><div class="label">Payment Method</div><div class="value" id="paymentMethod"></div></div>
+      </div>
+
+      <h2>Order</h2>
+      <div id="items"></div>
+      <div class="total"><span>Total</span><span id="total"></span></div>
+      <div class="tax">Tax included in menu prices.</div>
+    </main>
+
+    <div class="actions" id="actions" hidden>
+      <button type="button" onclick="window.print()">Print / Save Receipt</button>
+    </div>
+
+    <div id="error" class="message" hidden>
+      <h2>Receipt not found</h2>
+      <p>This receipt link is invalid or unavailable. Please contact SOUTH CHINA EXPRESS if you need help with your order.</p>
+    </div>
+
+    <footer>Thank you for your order!</footer>
+  </section>
+</div>
+
+<script>
+const SUPABASE_URL = "https://xbomdoryfqyxiubtrffd.supabase.co";
+const SUPABASE_KEY = "sb_publishable_iP4E_cTzYcqVz3JTmC99oA_dNCEJe8N";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n || 0));
+const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+
+function pretty(value){
+  return String(value || "").replaceAll("_"," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+async function loadReceipt(){
+  const token = new URLSearchParams(location.search).get("t");
+  if(!token){ showError(); return; }
+
+  const { data, error } = await db.rpc("get_customer_receipt",{p_token:token});
+  if(error || !data){ console.error(error); showError(); return; }
+
+  $("loading").hidden = true;
+  $("content").hidden = false;
+  $("actions").hidden = false;
+
+  $("orderNumber").textContent = data.order_number || "";
+  $("customerName").textContent = data.customer_name || "";
+  $("orderStatus").textContent = pretty(data.order_status);
+  $("paymentMethod").textContent = data.payment_method === "ONLINE" ? "PayPal / Card" : pretty(data.payment_method);
+
+  const paid = String(data.payment_status).toUpperCase() === "PAID";
+  $("paymentStatus").textContent = paid ? "PAID" : "PAYMENT DUE";
+  $("paymentStatus").classList.add(paid ? "paid" : "due");
+
+  const d = new Date(data.created_at);
+  $("orderDate").textContent = Number.isNaN(d.getTime()) ? "" :
+    d.toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+
+  $("total").textContent = money(data.total);
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  $("items").innerHTML = items.map(item => `
+    <div class="item">
+      <div class="item-top">
+        <span>${safe(item.item_name)}</span>
+        <span>${money(item.line_total)}</span>
+      </div>
+      ${item.item_option ? `<div class="option">${safe(item.item_option)}</div>` : ""}
+      <div class="item-bottom">
+        <span>Qty ${Number(item.quantity || 0)}</span>
+        <span>${money(item.unit_price)} each</span>
+      </div>
+    </div>`).join("");
+}
+
+function showError(){
+  $("loading").hidden = true;
+  $("content").hidden = true;
+  $("actions").hidden = true;
+  $("error").hidden = false;
+}
+
+loadReceipt();
+</script>
+</body>
+</html>
