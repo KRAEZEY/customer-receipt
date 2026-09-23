@@ -1,152 +1,690 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>South China Express | Receipt</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#c9141c" />
+  <title>SOUTH CHINA EXPRESS — Order Status</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    :root{--red:#9d1717;--dark:#171717;--gold:#c99428;--paper:#fff;--muted:#6b7280;--bg:#f4efe5}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--dark)}
-    .wrap{max-width:720px;margin:0 auto;padding:24px 14px 50px}
-    .receipt{background:var(--paper);border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.12);overflow:hidden}
-    header{background:var(--red);color:white;text-align:center;padding:26px 18px;border-bottom:5px solid var(--gold)}
-    header h1{margin:0;font-size:30px;letter-spacing:.7px}
-    header p{margin:7px 0 0;opacity:.92}
-    main{padding:24px}
-    .status{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-    .badge{padding:7px 11px;border-radius:999px;font-weight:700;font-size:13px;background:#f2f2f2}
-    .paid{background:#dcfce7;color:#166534}.due{background:#fef3c7;color:#92400e}
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-bottom:20px;border-bottom:1px dashed #bbb}
-    .label{font-size:12px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}
-    .value{font-weight:700}
-    h2{font-size:18px;margin:24px 0 10px}
-    .item{padding:13px 0;border-bottom:1px solid #eee}
-    .item-top{display:flex;justify-content:space-between;gap:15px;font-weight:700}
-    .option{font-size:14px;color:#555;margin-top:5px}
-    .item-bottom{display:flex;justify-content:space-between;margin-top:7px;color:#666;font-size:14px}
-    .total{display:flex;justify-content:space-between;align-items:center;font-size:23px;font-weight:800;padding:22px 0 8px}
-    .tax{text-align:right;color:var(--muted);font-size:12px}
-    .actions{padding:0 24px 24px}
-    button{width:100%;border:0;border-radius:12px;background:var(--red);color:white;font-size:17px;font-weight:800;padding:15px;cursor:pointer}
-    .message{text-align:center;padding:45px 24px}
-    .message h2{font-size:23px}.message p{color:#666;line-height:1.5}
-    footer{text-align:center;color:#777;font-size:12px;padding:18px}
-    @media(max-width:520px){.meta{grid-template-columns:1fr}header h1{font-size:25px}}
-    @media print{
-      body{background:white}.wrap{max-width:none;padding:0}.receipt{box-shadow:none;border-radius:0}
-      .actions{display:none}header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    :root {
+      --red: #c9141c;
+      --red-dark: #8f0b10;
+      --gold: #f4c64f;
+      --cream: #fff9ec;
+      --ink: #201b1c;
+      --muted: #6c6263;
+      --green: #14833b;
+      --green-soft: #e9f8ee;
+      --panel: rgba(255,255,255,.96);
+      --border: #eadfce;
+      --shadow: 0 14px 38px rgba(35, 20, 15, .12);
     }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(244,198,79,.20), transparent 32%),
+        linear-gradient(180deg, #fff8e8 0%, #f6efe4 100%);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--red-dark), var(--red));
+      color: white;
+      border-bottom: 5px solid var(--gold);
+      padding: 18px 22px;
+    }
+
+    .header-inner {
+      max-width: 1500px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 58px);
+      line-height: .95;
+      letter-spacing: .02em;
+      font-weight: 950;
+    }
+
+    .brand p {
+      margin: 9px 0 0;
+      color: #fff4ce;
+      font-size: clamp(14px, 1.5vw, 22px);
+      font-weight: 700;
+    }
+
+    .live {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .live-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #52e27f;
+      box-shadow: 0 0 0 5px rgba(82,226,127,.15);
+    }
+
+    main {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: clamp(14px, 2.2vw, 30px);
+      flex: 1;
+    }
+
+    .intro {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .intro h2 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 42px);
+    }
+
+    .intro p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: clamp(14px, 1.25vw, 18px);
+    }
+
+    .updated {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(14px, 2vw, 24px);
+      align-items: start;
+    }
+
+    .column {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .column-head {
+      padding: 17px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .column-head.preparing {
+      background: #fff3cf;
+    }
+
+    .column-head.ready {
+      background: var(--green-soft);
+    }
+
+    .column-title {
+      margin: 0;
+      font-size: clamp(22px, 2.2vw, 34px);
+      font-weight: 950;
+    }
+
+    .count {
+      min-width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: white;
+      font-weight: 950;
+      font-size: 20px;
+      border: 1px solid rgba(0,0,0,.08);
+    }
+
+    .orders {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .order {
+      min-height: 122px;
+      border-radius: 18px;
+      border: 2px solid #eadfce;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 14px 12px;
+    }
+
+    .order.ready {
+      border-color: #8bd19e;
+      background: #f2fff6;
+    }
+
+    .order .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      font-weight: 900;
+      margin-bottom: 5px;
+    }
+
+    .order .number {
+      font-size: clamp(32px, 4vw, 54px);
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: .04em;
+    }
+
+    .order .customer {
+      margin-top: 8px;
+      font-size: clamp(17px, 1.6vw, 23px);
+      font-weight: 900;
+      color: var(--ink);
+      overflow-wrap: anywhere;
+    }
+
+    .order .full {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+
+    .ready .number {
+      color: var(--green);
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      min-height: 160px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 20px;
+      font-size: 18px;
+    }
+
+    .empty strong {
+      display: block;
+      color: var(--ink);
+      font-size: 22px;
+      margin-bottom: 5px;
+    }
+
+    .notice {
+      margin-top: 18px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 13px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .error {
+      display: none;
+      margin-bottom: 16px;
+      border: 1px solid #e7a2a2;
+      background: #fff0f0;
+      color: #8a1111;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 760px) {
+      header {
+        padding: 15px 15px;
+      }
+
+      .header-inner {
+        align-items: flex-start;
+      }
+
+      .live {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+
+      main {
+        padding: 12px;
+      }
+
+      .intro {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .updated {
+        text-align: left;
+      }
+
+      .board {
+        grid-template-columns: 1fr;
+      }
+
+      .column {
+        border-radius: 18px;
+      }
+
+      .orders {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 10px;
+        gap: 9px;
+      }
+
+      .order {
+        min-height: 105px;
+        border-radius: 14px;
+        padding: 10px 8px;
+      }
+
+      .order .number {
+        font-size: clamp(28px, 11vw, 42px);
+      }
+
+      .order .customer {
+        font-size: 16px;
+      }
+
+      .order .full {
+        display: none;
+      }
+
+      .notice {
+        margin-top: 12px;
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 390px) {
+      .brand h1 {
+        font-size: 26px;
+      }
+
+      .brand p {
+        font-size: 12px;
+      }
+
+      .live span:last-child {
+        display: none;
+      }
+    }
+
+    @media (min-width: 1150px) {
+      .orders {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    /* === POLISHED CUSTOMER ORDER PROGRESS === */
+    body {
+      background:
+        radial-gradient(circle at top right, rgba(243,201,105,.22), transparent 30%),
+        linear-gradient(180deg,#fffaf1 0%,#f5efe5 100%);
+    }
+
+    header {
+      box-shadow:0 5px 20px rgba(0,0,0,.18);
+    }
+
+    .intro {
+      background:#fff;
+      border:1px solid #eadfce;
+      border-radius:18px;
+      padding:18px 20px;
+      box-shadow:0 8px 24px rgba(0,0,0,.08);
+      margin-bottom:18px;
+    }
+
+    .intro h2 {
+      color:#151515;
+      margin-bottom:5px;
+    }
+
+    .intro p {
+      color:#666;
+      font-weight:700;
+    }
+
+    .board {
+      align-items:start;
+    }
+
+    .column {
+      box-shadow:0 10px 28px rgba(0,0,0,.09);
+      border:1px solid #eadfce;
+    }
+
+    .column-head {
+      min-height:66px;
+    }
+
+    .column-head.preparing {
+      background:linear-gradient(135deg,#c36a13,#df8427);
+    }
+
+    .column-head.ready {
+      background:linear-gradient(135deg,#18864b,#20a05a);
+    }
+
+    .count {
+      min-width:38px;
+      height:38px;
+      display:grid;
+      place-items:center;
+      padding:0 10px;
+      background:rgba(255,255,255,.20);
+      border:1px solid rgba(255,255,255,.35);
+      border-radius:999px;
+    }
+
+    .order {
+      border:2px solid #ece3d6;
+      box-shadow:0 5px 14px rgba(0,0,0,.06);
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+
+    .order.ready {
+      border-color:#9dd8b5;
+      background:linear-gradient(180deg,#f5fff8,#eaf8ef);
+    }
+
+    .order .number {
+      letter-spacing:.02em;
+    }
+
+    .order .customer-name {
+      font-weight:900;
+    }
+
+    .notice {
+      background:#fff;
+      border:1px solid #eadfce;
+      border-radius:14px;
+      padding:13px 15px;
+      color:#666;
+      box-shadow:0 5px 15px rgba(0,0,0,.05);
+    }
+
+    .status-guide {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .status-guide span {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:.78rem;
+      font-weight:900;
+      background:#f5f5f5;
+      border:1px solid #e2e2e2;
+    }
+
+    .status-guide .prep-guide { color:#9a500d; background:#fff4e7; border-color:#f1c99f; }
+    .status-guide .ready-guide { color:#126537; background:#eaf8ef; border-color:#b7dfc5; }
+
+    @media (max-width:650px) {
+      .intro {
+        padding:15px;
+        border-radius:15px;
+      }
+
+      .intro h2 {
+        font-size:1.22rem;
+      }
+
+      .orders {
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+
+      .column-head {
+        min-height:58px;
+      }
+
+      .column-title {
+        font-size:1rem;
+      }
+
+      .notice {
+        font-size:.78rem;
+      }
+    }
+
+    @media (max-width:360px) {
+      .orders { grid-template-columns:1fr; }
+    }
+
   </style>
 </head>
+
 <body>
-<div class="wrap">
-  <section class="receipt">
-    <header>
-      <h1>SOUTH CHINA EXPRESS</h1>
-      <p>Customer Receipt</p>
-    </header>
-
-    <div id="loading" class="message">
-      <h2>Loading receipt…</h2>
-      <p>Please wait while we retrieve your order.</p>
-    </div>
-
-    <main id="content" hidden>
-      <div class="status">
-        <span class="badge" id="orderStatus"></span>
-        <span class="badge" id="paymentStatus"></span>
+<div class="page">
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <h1>SOUTH CHINA EXPRESS</h1>
+        <p>Customer Order Status</p>
       </div>
 
-      <div class="meta">
-        <div><div class="label">Order Number</div><div class="value" id="orderNumber"></div></div>
-        <div><div class="label">Order Date</div><div class="value" id="orderDate"></div></div>
-        <div><div class="label">Customer</div><div class="value" id="customerName"></div></div>
-        <div><div class="label">Payment Method</div><div class="value" id="paymentMethod"></div></div>
+      <div class="live" aria-label="Live order board">
+        <span class="live-dot"></span>
+        <span>LIVE</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="intro">
+      <div>
+        <h2>Watch for your order number</h2>
+        <p>When your number moves to READY FOR PICKUP, come grab your order.</p>
+      </div>
+      <div class="updated" id="lastUpdated">Connecting…</div>
+    </div>
+    <div class="status-guide" aria-label="Order status guide">
+      <span class="prep-guide">🍳 Being Prepared</span>
+      <span class="ready-guide">✅ Ready for Pickup</span>
+    </div>
+
+    <div class="error" id="errorBox"></div>
+
+    <section class="board" aria-live="polite">
+      <div class="column">
+        <div class="column-head preparing">
+          <h3 class="column-title">🍳 Being Prepared</h3>
+          <div class="count" id="preparingCount">0</div>
+        </div>
+        <div class="orders" id="preparingOrders">
+          <div class="empty">
+            <div><strong>No orders yet</strong>New orders will appear here automatically.</div>
+          </div>
+        </div>
       </div>
 
-      <h2>Order</h2>
-      <div id="items"></div>
-      <div class="total"><span>Total</span><span id="total"></span></div>
-      <div class="tax">Tax included in menu prices.</div>
-    </main>
+      <div class="column">
+        <div class="column-head ready">
+          <h3 class="column-title">✅ Ready for Pickup</h3>
+          <div class="count" id="readyCount">0</div>
+        </div>
+        <div class="orders" id="readyOrders">
+          <div class="empty">
+            <div><strong>Nothing ready yet</strong>Ready orders will appear here automatically.</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <div class="actions" id="actions" hidden>
-      <button type="button" onclick="window.print()">Print / Save Receipt</button>
+    <div class="notice">
+      This screen displays order numbers and customer names only. Phone numbers, notes, totals, and payment information stay private.
     </div>
-
-    <div id="error" class="message" hidden>
-      <h2>Receipt not found</h2>
-      <p>This receipt link is invalid or unavailable. Please contact SOUTH CHINA EXPRESS if you need help with your order.</p>
-    </div>
-
-    <footer>Thank you for your order!</footer>
-  </section>
+  </main>
 </div>
 
 <script>
-const SUPABASE_URL = "https://xbomdoryfqyxiubtrffd.supabase.co";
-const SUPABASE_KEY = "sb_publishable_iP4E_cTzYcqVz3JTmC99oA_dNCEJe8N";
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_URL = "https://xbomdoryfqyxiubtrffd.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_iP4E_cTzYcqVz3JTmC99oA_dNCEJe8N";
 
-const $ = id => document.getElementById(id);
-const money = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n || 0));
-const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function pretty(value){
-  return String(value || "").replaceAll("_"," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
-}
+  const preparingOrders = document.getElementById("preparingOrders");
+  const readyOrders = document.getElementById("readyOrders");
+  const preparingCount = document.getElementById("preparingCount");
+  const readyCount = document.getElementById("readyCount");
+  const lastUpdated = document.getElementById("lastUpdated");
+  const errorBox = document.getElementById("errorBox");
 
-async function loadReceipt(){
-  const token = new URLSearchParams(location.search).get("t");
-  if(!token){ showError(); return; }
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
-  const { data, error } = await db.rpc("get_customer_receipt",{p_token:token});
-  if(error || !data){ console.error(error); showError(); return; }
+  function displayNumber(orderNumber) {
+    const text = String(orderNumber || "");
+    const pieces = text.split("-");
+    return pieces.length ? pieces[pieces.length - 1] : text;
+  }
 
-  $("loading").hidden = true;
-  $("content").hidden = false;
-  $("actions").hidden = false;
+  function renderOrder(order, isReady) {
+    return `
+      <article class="order ${isReady ? "ready" : ""}">
+        <div class="label">ORDER</div>
+        <div class="number">${escapeHtml(displayNumber(order.order_number))}</div>
+        <div class="customer">${escapeHtml(order.customer_name || "Customer")}</div>
+        <div class="full">${escapeHtml(order.order_number)}</div>
+      </article>
+    `;
+  }
 
-  $("orderNumber").textContent = data.order_number || "";
-  $("customerName").textContent = data.customer_name || "";
-  $("orderStatus").textContent = pretty(data.order_status);
-  $("paymentMethod").textContent = data.payment_method === "ONLINE" ? "PayPal / Card" : pretty(data.payment_method);
+  function renderEmpty(kind) {
+    if (kind === "ready") {
+      return `
+        <div class="empty">
+          <div><strong>Nothing ready yet</strong>Ready orders will appear here automatically.</div>
+        </div>
+      `;
+    }
 
-  const paid = String(data.payment_status).toUpperCase() === "PAID";
-  $("paymentStatus").textContent = paid ? "PAID" : "PAYMENT DUE";
-  $("paymentStatus").classList.add(paid ? "paid" : "due");
-
-  const d = new Date(data.created_at);
-  $("orderDate").textContent = Number.isNaN(d.getTime()) ? "" :
-    d.toLocaleString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
-
-  $("total").textContent = money(data.total);
-
-  const items = Array.isArray(data.items) ? data.items : [];
-  $("items").innerHTML = items.map(item => `
-    <div class="item">
-      <div class="item-top">
-        <span>${safe(item.item_name)}</span>
-        <span>${money(item.line_total)}</span>
+    return `
+      <div class="empty">
+        <div><strong>No orders being prepared</strong>New orders will appear here automatically.</div>
       </div>
-      ${item.item_option ? `<div class="option">${safe(item.item_option)}</div>` : ""}
-      <div class="item-bottom">
-        <span>Qty ${Number(item.quantity || 0)}</span>
-        <span>${money(item.unit_price)} each</span>
-      </div>
-    </div>`).join("");
-}
+    `;
+  }
 
-function showError(){
-  $("loading").hidden = true;
-  $("content").hidden = true;
-  $("actions").hidden = true;
-  $("error").hidden = false;
-}
+  async function loadBoard() {
+    try {
+      const { data, error } = await db.rpc("get_public_order_board");
 
-loadReceipt();
+      if (error) throw error;
+
+      const orders = Array.isArray(data) ? data : [];
+      const preparing = orders.filter(o =>
+        o.order_status === "NEW" || o.order_status === "PREPARING"
+      );
+      const ready = orders.filter(o => o.order_status === "READY");
+
+      preparingCount.textContent = preparing.length;
+      readyCount.textContent = ready.length;
+
+      preparingOrders.innerHTML = preparing.length
+        ? preparing.map(o => renderOrder(o, false)).join("")
+        : renderEmpty("preparing");
+
+      readyOrders.innerHTML = ready.length
+        ? ready.map(o => renderOrder(o, true)).join("")
+        : renderEmpty("ready");
+
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+
+      lastUpdated.textContent =
+        "Updated " +
+        new Date().toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+    } catch (error) {
+      console.error("Order board error:", error);
+      errorBox.textContent =
+        "Order board is temporarily unable to update. It will keep trying automatically.";
+      errorBox.style.display = "block";
+      lastUpdated.textContent = "Reconnecting…";
+    }
+  }
+
+  loadBoard();
+  setInterval(loadBoard, 5000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) loadBoard();
+  });
 </script>
 </body>
 </html>
